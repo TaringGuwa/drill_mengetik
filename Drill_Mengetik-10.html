@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drill Mengetik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EDEF; --surface:#FFFFFF; --text:#1E2A32; --muted:#6A7882; --line:#CBD3D8;
+  --ok:#237A5B; --bad:#C93C3C; --badbg:#F6D5D5; --cap:#DDE6E1; --capedge:#B7C6BD; --next:#F2A33A; --nexttext:#3A2400;
+  --ui:'Bricolage Grotesque',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#13181C; --surface:#1B2227; --text:#E3EAEE; --muted:#8C9AA4; --line:#2B353C;
+    --ok:#5FD0A3; --bad:#FF7A7A; --badbg:#4A2528; --cap:#26312C; --capedge:#38473F; --next:#F2A33A; --nexttext:#2A1B00;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13181C; --surface:#1B2227; --text:#E3EAEE; --muted:#8C9AA4; --line:#2B353C;
+  --ok:#5FD0A3; --bad:#FF7A7A; --badbg:#4A2528; --cap:#26312C; --capedge:#38473F; --next:#F2A33A; --nexttext:#2A1B00;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh}
+main{max-width:760px;margin:0 auto;padding:28px 18px 40px}
+.view[hidden]{display:none}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h1{font-size:1.5rem;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:.95rem;margin:4px 0 0}
+button{font:inherit}
+
+/* navigasi */
+.back{background:transparent;border:0;color:var(--muted);cursor:pointer;padding:4px 0;margin:0 0 10px;font-size:.92rem}
+.back:hover{color:var(--text)}
+
+/* menu */
+.menu{display:grid;gap:12px;margin-top:8px}
+.card{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--surface);color:var(--text);
+  border:1px solid var(--line);border-radius:14px;padding:16px 18px;cursor:pointer;transition:border-color .12s,transform .12s}
+.card:hover{border-color:var(--next);transform:translateY(-1px)}
+.card .num{flex:none;width:38px;height:38px;border-radius:10px;background:var(--cap);border:1px solid var(--capedge);border-bottom-width:3px;
+  display:grid;place-items:center;font-family:var(--mono);font-weight:500}
+.card .t{font-weight:700;font-size:1.05rem}
+.card .d{font-family:var(--mono);color:var(--muted);font-size:.82rem;margin-top:3px;letter-spacing:.06em}
+.card .go{margin-left:auto;color:var(--muted);font-size:1.2rem}
+
+/* drill */
+.stats{display:flex;gap:26px;margin:6px 0 14px}
+.stat b{display:block;font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:.85rem;color:var(--muted)}
+.passage{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 22px;
+  font-family:var(--mono);font-size:1.45rem;line-height:2.1;white-space:pre-wrap;word-break:break-word;min-height:150px;
+  letter-spacing:.04em;outline:none;cursor:text}
+.passage span{color:var(--muted);opacity:.75;border-radius:3px}
+.passage span.c{color:var(--ok);opacity:1}
+.passage span.w{color:var(--bad);background:var(--badbg);opacity:1}
+.passage span.cur{box-shadow:-2px 0 0 var(--next);opacity:1;color:var(--text)}
+.hint{margin:10px 2px 0;color:var(--muted);font-size:.88rem}
+.board{margin:26px auto 0;display:flex;flex-direction:column;align-items:center;gap:8px}
+.row{display:flex;gap:8px}
+.board.stagger .row:nth-child(1){transform:translateX(-18px)}
+.board.stagger .row:nth-child(2){transform:translateX(-6px)}
+.board.stagger .row:nth-child(3){transform:translateX(18px)}
+.key{width:48px;height:48px;border-radius:10px;background:var(--cap);border:1px solid var(--capedge);border-bottom-width:4px;
+  display:grid;place-items:center;font-family:var(--mono);font-size:1.15rem;font-weight:500;color:var(--text);transition:transform .08s}
+.key.bump{position:relative}
+.key.bump::after{content:"";position:absolute;bottom:6px;width:12px;height:2px;border-radius:2px;background:var(--capedge)}
+.key.next{background:var(--next);border-color:var(--next);color:var(--nexttext)}
+.key.next.bump::after{background:var(--nexttext);opacity:.5}
+.key.dim{opacity:.38}
+.key.shift{color:var(--muted);font-size:.78rem;font-family:var(--ui)}
+.key.shift.next{color:var(--nexttext)}
+.passage.long{position:relative;max-height:min(46vh,360px);overflow-y:auto}
+.board.kb{--ku:min(56px,calc((100vw - 36px)/12));--gap:calc(var(--ku)*.14);align-items:flex-start;gap:var(--gap);width:max-content;max-width:100%}
+.board.kb .row{gap:var(--gap);margin-left:calc(var(--off,0)*var(--ku))}
+.board.kb .key{width:calc(var(--ku) - var(--gap));height:calc(var(--ku)*.82);font-size:clamp(.8rem,calc(var(--ku)*.34),1.15rem)}
+.board.kb .key.space{width:calc(var(--ku)*5 - var(--gap))}
+.board.kb .key.shift{width:calc(var(--ku)*1.7 - var(--gap))}
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:4px 0 12px}
+.switch{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:.95rem}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch .track{width:42px;height:24px;border-radius:999px;background:var(--line);position:relative;transition:background .15s;flex:none}
+.switch .track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--bg);transition:transform .15s}
+.switch input:checked + .track{background:var(--next)}
+.switch input:checked + .track::after{transform:translateX(18px)}
+.switch input:focus-visible + .track{outline:2px solid var(--next);outline-offset:2px}
+.status{min-height:1.2em;margin:0 0 10px;color:var(--muted);font-size:.88rem}
+.status.warn{color:var(--bad);font-weight:700}
+.key.hit{transform:translateY(3px);border-bottom-width:1px}
+.key.space{width:min(320px,70vw);color:var(--muted);font-size:.85rem;font-family:var(--ui)}
+.key.space.next{color:var(--nexttext)}
+.result{display:none;margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
+.result.show{display:block}
+.result h2{margin:0 0 12px;font-size:1.15rem}
+.result .grid{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:16px}
+.btn{background:var(--text);color:var(--bg);border:0;border-radius:10px;padding:10px 18px;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);font-weight:500}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+kbd{font-family:var(--mono);font-size:.82em;border:1px solid currentColor;border-bottom-width:2px;border-radius:5px;padding:0 5px;opacity:.8}
+:focus-visible{outline:2px solid var(--next);outline-offset:2px}
+@media (max-width:520px){
+  .passage{font-size:1.15rem;padding:16px}
+  .key{width:30px;height:38px;font-size:.95rem;border-radius:8px}
+  .row{gap:5px}.board{gap:5px}
+  .board.stagger .row:nth-child(1){transform:translateX(-11px)}
+  .board.stagger .row:nth-child(2){transform:translateX(-4px)}
+  .board.stagger .row:nth-child(3){transform:translateX(11px)}
+}
+.stats.wrap{flex-wrap:wrap;row-gap:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:16px}
+.panel h2{margin:0;font-size:1.05rem}
+.panel .hint{margin:10px 0 0}
+.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.seg{display:flex;gap:6px}
+.btn.sm{padding:5px 12px;font-size:.85rem}
+.btn.ghost[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+#chart{width:100%;height:auto;display:block;font-family:var(--ui)}
+.scroll{max-height:340px;overflow:auto}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.92rem}
+.tbl th{text-align:left;color:var(--muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+.tbl td{padding:7px 8px;border-bottom:1px solid var(--line)}
+.tbl td.k{font-family:var(--mono);font-weight:500}
+.tbl tr.weak td{background:var(--badbg)}
+.hl{list-style:none;margin:0;padding:0}
+.hl li{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line);font-size:.9rem}
+.hl li:first-child{border-top:0}
+.hl b{font-variant-numeric:tabular-nums;white-space:nowrap}
+</style>
+</head>
+<body>
+<main>
+
+  <!-- MENU UTAMA -->
+  <section class="view" id="vMain">
+    <header>
+      <div>
+        <h1>Drill mengetik</h1>
+        <p class="sub">Pilih jenis latihan.</p>
+      </div>
+    </header>
+    <div class="menu">
+      <button class="card" id="openAbs">
+        <span class="num">A</span>
+        <span><div class="t">Latihan Abstrak</div><div class="d">Huruf dan simbol acak per baris keyboard</div></span>
+        <span class="go" aria-hidden="true">›</span>
+      </button>
+      <button class="card" id="openFinger">
+        <span class="num">B</span>
+        <span><div class="t">Latihan Jari</div><div class="d">Satu jari per drill, kiri dan kanan sekaligus</div></span>
+        <span class="go" aria-hidden="true">›</span>
+      </button>
+      <button class="card" id="openWords">
+        <span class="num">C</span>
+        <span><div class="t">Kata Acak</div><div class="d">Kata acak dari database kategori Anda</div></span>
+        <span class="go" aria-hidden="true">›</span>
+      </button>
+      <button class="card" id="openTexts">
+        <span class="num">D</span>
+        <span><div class="t">Teks Unggahan</div><div class="d">Cerita atau percakapan dari AI (.txt)</div></span>
+        <span class="go" aria-hidden="true">›</span>
+      </button>
+      <button class="card" id="openStats">
+        <span class="num">E</span>
+        <span><div class="t">Statistik &amp; Riwayat</div><div class="d">WPM terbaik, grafik harian, streak, huruf lemah</div></span>
+        <span class="go" aria-hidden="true">›</span>
+      </button>
+      <button class="card" id="openAdapt">
+        <span class="num">F</span>
+        <span><div class="t">Drill Adaptif</div><div class="d">Latihan dari huruf lemah dan tombol lambat Anda</div></span>
+        <span class="go" aria-hidden="true">›</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- SUBMENU LATIHAN ABSTRAK -->
+  <section class="view" id="vAbs" hidden>
+    <button class="back" id="backMain">‹ Menu utama</button>
+    <header>
+      <div>
+        <h1>Latihan Abstrak</h1>
+        <p class="sub">Tiap menu berisi 30 kata acak. Selesaikan berurutan atau pilih sendiri.</p>
+      </div>
+    </header>
+    <div class="menu" id="absMenu"></div>
+  </section>
+
+  <!-- SUBMENU LATIHAN JARI -->
+  <section class="view" id="vFinger" hidden>
+    <button class="back" id="backMain2">‹ Menu utama</button>
+    <header>
+      <div>
+        <h1>Latihan Jari</h1>
+        <p class="sub">Tiap menu berisi 30 kata acak dari tombol satu jari di kedua tangan sekaligus.</p>
+      </div>
+    </header>
+    <div class="menu" id="fingerMenu"></div>
+  </section>
+
+  <!-- KATA ACAK (DATABASE) -->
+  <section class="view" id="vWords" hidden>
+    <button class="back" id="backMain3">‹ Menu utama</button>
+    <header>
+      <div>
+        <h1>Kata Acak</h1>
+        <p class="sub">Kata acak dari file kategori yang Anda unggah. Jumlah kata per drill mengikuti isi file.</p>
+      </div>
+    </header>
+    <div class="controls">
+      <button class="btn" id="pickFiles">Tambah file kategori (.txt)</button>
+      <input type="file" id="wordFile" accept=".txt,text/plain" multiple hidden>
+    </div>
+    <p class="hint">Satu drill berisi semua kata di file kategori sekali putaran (urutan acak), jadi batas kata mengikuti jumlah kata di file. Pilih &ldquo;Semua kategori&rdquo; untuk menggabungkan seluruh file. Tekan Esc untuk berhenti lebih awal.</p>
+    <p class="status" id="wordsStatus" aria-live="polite"></p>
+    <p class="hint" id="wordsEmpty">Belum ada kategori. Unggah file .txt dengan format: judul di baris pertama (opsional, contoh <kbd>T01. DIRI &amp; KELUARGA (L1-L2)</kbd>), lalu sub-kategori di dalam kurung siku <kbd>[Nama]</kbd> diikuti kata-kata yang dipisah koma. Tanpa judul pun boleh, termasuk satu kata per baris. Bisa memilih banyak file sekaligus.</p>
+    <div class="menu" id="wordsMenu"></div>
+    <div class="actions"><button class="btn ghost" id="clearWords" hidden>Hapus semua kategori</button></div>
+  </section>
+
+  <!-- TEKS UNGGAHAN -->
+  <section class="view" id="vTexts" hidden>
+    <button class="back" id="backMain4">‹ Menu utama</button>
+    <header>
+      <div>
+        <h1>Teks Unggahan</h1>
+        <p class="sub">Cerita atau simulasi percakapan dari AI (.txt), diketik utuh dari awal sampai akhir.</p>
+      </div>
+    </header>
+    <div class="controls">
+      <button class="btn" id="pickTexts">Tambah file teks (.txt)</button>
+      <input type="file" id="textFile" accept=".txt,text/plain" multiple hidden>
+      <label class="switch"><input type="checkbox" id="enterToggle" role="switch"><span class="track"></span><span>Ketik Enter di akhir baris</span></label>
+    </div>
+    <p class="status" id="textsStatus" aria-live="polite"></p>
+    <p class="hint" id="textsEmpty">Belum ada teks. Unggah file .txt berisi cerita atau percakapan. Karakter yang tidak ada di keyboard (emoji, tanda kutip lengkung, tanda pisah panjang, format markdown) otomatis dibersihkan atau diganti. Bisa memilih banyak file sekaligus.</p>
+    <div class="menu" id="textsMenu"></div>
+    <div class="actions"><button class="btn ghost" id="clearTexts" hidden>Hapus semua teks</button></div>
+  </section>
+
+  <!-- STATISTIK & RIWAYAT -->
+  <section class="view" id="vStats" hidden>
+    <button class="back" id="backStats">‹ Menu utama</button>
+    <header>
+      <div>
+        <h1>Statistik &amp; Riwayat</h1>
+        <p class="sub">Tersimpan di browser ini. Dicatat dari setiap drill yang selesai atau dihentikan (minimal 10 ketukan).</p>
+      </div>
+    </header>
+    <div class="stats wrap">
+      <div class="stat"><b id="sBest">0</b><span>WPM terbaik</span></div>
+      <div class="stat"><b id="sStreak">0</b><span>streak (hari)</span></div>
+      <div class="stat"><b id="sLong">0</b><span>streak terpanjang</span></div>
+      <div class="stat"><b id="sCount">0</b><span>total sesi</span></div>
+    </div>
+    <p class="status" id="sBestInfo"></p>
+    <p class="hint" id="sEmpty">Belum ada riwayat. Selesaikan satu drill (minimal 10 ketukan) dan datanya muncul di sini. WPM terbaik hanya dihitung dari sesi dengan minimal 20 ketukan.</p>
+
+    <div class="panel">
+      <div class="ph"><h2>Rata-rata WPM per hari</h2>
+        <div class="seg"><button class="btn ghost sm" id="c14">14 hari</button><button class="btn ghost sm" id="c30">30 hari</button></div>
+      </div>
+      <svg id="chart" viewBox="0 0 640 190" role="img" aria-label="Grafik rata-rata WPM per hari"></svg>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>Analisis huruf lemah</h2></div>
+      <p class="status" id="weakAvg"></p>
+      <p class="hint" id="weakEmpty" style="margin:0 0 8px">Belum cukup data. Tiap tombol perlu minimal 5 ketukan.</p>
+      <div class="scroll">
+        <table class="tbl"><thead><tr><th>Tombol</th><th>Ketukan</th><th>Salah</th><th>Latensi</th><th>Sering salah jadi</th></tr></thead><tbody id="weakBody"></tbody></table>
+      </div>
+      <p class="hint">Baris merah muda = 5 tombol terlemah. Skor = persentase salah ketik + tambahan jika tombol lebih lambat dari rata-rata. Latensi = jeda dari ketikan sebelumnya ke ketikan benar pada tombol itu; jeda lebih dari 2 detik dan ketikan setelah Backspace diabaikan. Huruf kapital dan simbol dihitung ke tombol dasarnya.</p>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>Riwayat terbaru</h2></div>
+      <ul class="hl" id="histList"></ul>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="goAdapt">Mulai drill adaptif</button>
+      <button class="btn ghost" id="clearStats">Hapus semua statistik</button>
+    </div>
+  </section>
+
+  <!-- DRILL ADAPTIF -->
+  <section class="view" id="vAdapt" hidden>
+    <button class="back" id="backAdapt">‹ Menu utama</button>
+    <header>
+      <div>
+        <h1>Drill Adaptif</h1>
+        <p class="sub">Dibuat dari analisis salah ketik dan latensi per tombol. Diperbarui setiap kali menu ini dibuka dan setelah drill selesai.</p>
+      </div>
+    </header>
+    <p class="status" id="adaptWeak"></p>
+    <p class="hint" id="adaptEmpty">Belum cukup data untuk membuat drill. Selesaikan beberapa drill di menu lain dulu; tiap tombol perlu minimal 5 ketukan.</p>
+    <div class="menu" id="adaptMenu"></div>
+  </section>
+
+  <!-- DRILL -->
+  <section class="view" id="vDrill" hidden>
+    <button class="back" id="backDrill">‹ Latihan Abstrak</button>
+    <header>
+      <div>
+        <h1 id="dTitle">Drill</h1>
+        <p class="sub" id="dSub"></p>
+      </div>
+    </header>
+
+    <div class="controls">
+      <label class="switch"><input type="checkbox" id="soundToggle" role="switch"><span class="track"></span><span>Suara ketik</span></label>
+    </div>
+
+    <div class="stats" aria-live="off">
+      <div class="stat"><b id="wpm">0</b><span>kata/menit</span></div>
+      <div class="stat"><b id="acc">100%</b><span>akurasi</span></div>
+      <div class="stat"><b id="time">0.0</b><span id="timeLbl">detik</span></div>
+    </div>
+
+    <p class="status" id="dNote" aria-live="polite"></p>
+    <div class="passage" id="passage" tabindex="0" aria-label="Teks latihan mengetik"></div>
+    <p class="hint" id="dHint">Mulai mengetik kapan saja. Backspace untuk memperbaiki, Tab untuk teks baru, F1 untuk mengulang dari awal saat drill berjalan. Setelah hasil muncul: Enter = menu selanjutnya, Shift = ulangi drill.</p>
+
+    <div class="board" id="board" aria-hidden="true"></div>
+
+    <section class="result" id="result" aria-live="polite">
+      <h2 id="rTitle">Selesai</h2>
+      <div class="grid">
+        <div class="stat"><b id="rWpm">0</b><span>kata/menit</span></div>
+        <div class="stat"><b id="rAcc">0%</b><span>akurasi</span></div>
+        <div class="stat"><b id="rTime">0</b><span id="rTimeLbl">detik</span></div>
+        <div class="stat"><b id="rKeys">0</b><span>huruf diketik</span></div>
+        <div class="stat"><b id="rOk">0</b><span>huruf benar</span></div>
+        <div class="stat"><b id="rErr">0</b><span>salah ketik</span></div>
+      </div>
+      <p class="status" id="rNote" aria-live="polite"></p>
+      <div class="actions">
+        <button class="btn" id="next"></button>
+        <button class="btn ghost" id="redo">Ulangi drill <kbd>Shift</kbd></button>
+      </div>
+    </section>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ---------- Data menu Latihan Abstrak ---------- */
+  var TOP='qwertyuiop', HOME='asdfghjkl;', BOT='zxcvbnm,./';
+  var WORDS_PER_DRILL=30;
+  var LEVELS=[
+    { name:'Baris tengah', rows:[HOME] },
+    { name:'Baris atas',   rows:[TOP]  },
+    { name:'Baris bawah',  rows:[BOT]  },
+    { name:'Gabungan semua baris', rows:[TOP,HOME,BOT], desc:'Baris atas, tengah, dan bawah dicampur' }
+  ];
+  function spaced(s){ return s.toUpperCase().split('').join(' '); }
+  LEVELS.forEach(function(l){ l.pool=l.rows.join(''); if(!l.desc) l.desc=spaced(l.pool); });
+
+  /* ---------- Data menu Latihan Jari (kiri + kanan digabung) ---------- */
+  var FINGERS=[
+    { name:'Telunjuk',    left:'rfvtgb', right:'yhnujm' },
+    { name:'Jari tengah', left:'edc',    right:'ik,' },
+    { name:'Jari manis',  left:'wsx',    right:'ol.' },
+    { name:'Kelingking',  left:'qaz',    right:'p;/' }
+  ];
+  var FINGER_LEVELS=FINGERS.map(function(f){
+    return { name:f.name, rows:[TOP,HOME,BOT], pool:f.left+f.right,
+             desc:spaced(f.left)+'   ·   '+spaced(f.right), noRepeat:true };
+  });
+  var SETS={
+    abs:    { label:'Latihan Abstrak', backView:'abs',    backText:'‹ Latihan Abstrak', levels:LEVELS },
+    finger: { label:'Latihan Jari',    backView:'finger', backText:'‹ Latihan Jari',    levels:FINGER_LEVELS },
+    words:  { label:'Kata Acak',       backView:'words',  backText:'‹ Kata Acak',       levels:[] },
+    texts:  { label:'Teks Unggahan',   backView:'texts',  backText:'‹ Teks Unggahan',   levels:[] },
+    adapt:  { label:'Drill Adaptif',   backView:'adapt',  backText:'‹ Drill Adaptif',   levels:[] }
+  };
+  var curKey='abs', levels=LEVELS;
+
+  /* ---------- Navigasi ---------- */
+  var view='main', cur=0;
+  var views={ main:$('vMain'), abs:$('vAbs'), finger:$('vFinger'), words:$('vWords'), texts:$('vTexts'), stats:$('vStats'), adapt:$('vAdapt'), drill:$('vDrill') };
+  var parents={ abs:'main', finger:'main', words:'main', texts:'main', stats:'main', adapt:'main' };
+  function show(name){
+    view=name;
+    Object.keys(views).forEach(function(k){ views[k].hidden = (k!==name); });
+    if(name==='stats') renderStats();
+    if(name==='adapt') rebuildAdapt();
+    window.scrollTo(0,0);
+  }
+
+  function fillMenu(box,setKey){
+    box.innerHTML='';
+    SETS[setKey].levels.forEach(function(l,i){
+      var b=document.createElement('button'); b.className='card';
+      b.innerHTML='<span class="num">'+(i+1)+'</span><span><div class="t"></div><div class="d"></div></span><span class="go" aria-hidden="true">›</span>';
+      b.querySelector('.num').textContent=l.badge||(i+1);
+      b.querySelector('.t').textContent=l.name;
+      b.querySelector('.d').textContent=l.desc;
+      b.addEventListener('click',function(){ startLevel(setKey,i); });
+      box.appendChild(b);
+    });
+  }
+  /* ---------- Mesin drill ---------- */
+  var passageEl=$('passage'), boardEl=$('board'), resultEl=$('result');
+  var target='', typed=[], startT=null, done=false, timer=null, totalKeys=0, wrongKeys=0;
+  // waktu aktif: hanya detik saat benar-benar mengetik (jeda otomatis jika diam / pindah tab)
+  var IDLE_MS=5000, DONE_LOCK=600;
+  var activeMs=0, segStart=0, lastAct=0, paused=false, pauses=0, doneAt=0, capsOn=false;
+  var keyEls={}, spans=[], rendered=0, winStart=0, winEnd=0, WIN=2400, BACK=600;
+
+  // karakter bershift -> tombol dasarnya
+  var SHIFT_MAP={'!':'1','@':'2','#':'3','$':'4','%':'5','^':'6','&':'7','*':'8','(':'9',')':'0','_':'-','+':'=',':':';','"':"'",'<':',','>':'.','?':'/'};
+  var SHIFTED_BY={}; Object.keys(SHIFT_MAP).forEach(function(k){ SHIFTED_BY[SHIFT_MAP[k]]=k; });
+  var LEFT_KEYS='12345qwertasdfgzxcvb';
+
+  function rnd(n){ return Math.floor(Math.random()*n); }
+
+  // n kata acak dari list; semua kata dipakai sekali sebelum diacak ulang, tanpa kata sama berurutan
+  function sampleWords(list,n,avoid){
+    var out=[], bag=[], last=avoid||'';
+    while(out.length<n){
+      if(!bag.length){
+        bag=list.slice();
+        for(var i=bag.length-1;i>0;i--){ var j=rnd(i+1), t=bag[i]; bag[i]=bag[j]; bag[j]=t; }
+        if(bag.length>1 && bag[bag.length-1]===last){ var x=bag[0]; bag[0]=bag[bag.length-1]; bag[bag.length-1]=x; }
+      }
+      last=bag.pop(); out.push(last);
+    }
+    return out;
+  }
+
+  function generate(){
+    var L=levels[cur];
+    if(L.gen) return L.gen();
+    if(L.text) return L.text;
+    if(L.words) return sampleWords(L.words, L.words.length).join(' ');
+    var P=L.pool, words=[];
+    for(var n=0;n<WORDS_PER_DRILL;n++){
+      var wl=2+rnd(5), w='';
+      for(var i=0;i<wl;i++){
+        var c;
+        do { c=P[rnd(P.length)]; } while(L.noRepeat && P.length>1 && i>0 && c===w[i-1]);
+        w+=c;
+      }
+      words.push(w);
+    }
+    return words.join(' ');
+  }
+
+  /* ----- papan keyboard ----- */
+  function mkKey(ch,cls){
+    var k=document.createElement('div'); k.className='key'+(cls?' '+cls:''); k.textContent=ch; return k;
+  }
+
+  function buildWordBoard(L){
+    var chars=L.chars;
+    var used=function(c){
+      return chars.indexOf(c)>=0 || chars.indexOf(c.toUpperCase())>=0 || (SHIFTED_BY[c] && chars.indexOf(SHIFTED_BY[c])>=0);
+    };
+    var hasShift=/[A-Z!@#$%^&*()_+:"<>?]/.test(chars), hasEnter=chars.indexOf('\n')>=0;
+    var rows=[];
+    if(/[0-9!@#$%^&*()_+=\-]/.test(chars)) rows.push({k:'1234567890-=',off:0});
+    rows.push({k:'qwertyuiop',off:.5});
+    rows.push({k:used("'")?"asdfghjkl;'":'asdfghjkl;',off:.75});
+    rows.push({k:'zxcvbnm,./',off:1.25});
+    boardEl.className='board kb';
+    rows.forEach(function(r){
+      var row=document.createElement('div'); row.className='row'; row.style.setProperty('--off',r.off);
+      r.k.split('').forEach(function(ch){
+        var k=mkKey(ch,(ch==='f'||ch==='j')?'bump':''); if(!used(ch)) k.classList.add('dim');
+        row.appendChild(k); keyEls[ch]=k;
+      });
+      boardEl.appendChild(row);
+    });
+    var r2=document.createElement('div'); r2.className='row'; r2.style.setProperty('--off',hasEnter?.5:(hasShift?1.7:3.4));
+    if(hasShift){ var sl=mkKey('shift','shift'); r2.appendChild(sl); keyEls.shiftL=sl; }
+    var sp=mkKey('spasi','space'); r2.appendChild(sp); keyEls[' ']=sp;
+    if(hasShift){ var sr=mkKey('shift','shift'); r2.appendChild(sr); keyEls.shiftR=sr; }
+    if(hasEnter){ var en=mkKey('enter','shift'); r2.appendChild(en); keyEls.enter=en; }
+    boardEl.appendChild(r2);
+  }
+
+  function buildBoard(){
+    var L=levels[cur];
+    boardEl.innerHTML=''; keyEls={};
+    if(L.chars){ buildWordBoard(L); return; }
+    var rows=L.rows, pool=L.pool;
+    boardEl.className='board'+(rows.length>1?' stagger':'');
+    rows.forEach(function(r){
+      var row=document.createElement('div'); row.className='row';
+      r.split('').forEach(function(ch){
+        var k=mkKey(ch,(ch==='f'||ch==='j')?'bump':'');
+        if(pool.indexOf(ch)<0) k.classList.add('dim');
+        row.appendChild(k); keyEls[ch]=k;
+      });
+      boardEl.appendChild(row);
+    });
+    var sp=mkKey('spasi','space');
+    var r2=document.createElement('div'); r2.className='row'; r2.appendChild(sp); boardEl.appendChild(r2);
+    keyEls[' ']=sp;
+  }
+
+  // tombol yang harus ditekan untuk satu karakter (kapital/simbol = tombol dasar + Shift tangan sebaliknya)
+  function keyTargets(ch){
+    var out=[]; if(!ch) return out;
+    if(ch==='\n'){ if(keyEls.enter) out.push(keyEls.enter); return out; }
+    var base=null, lo=ch.toLowerCase();
+    if(ch!==lo && /[a-z]/.test(lo)) base=lo; else if(SHIFT_MAP[ch]) base=SHIFT_MAP[ch];
+    if(base){
+      if(keyEls[base]) out.push(keyEls[base]);
+      var sh=LEFT_KEYS.indexOf(base)>=0 ? 'shiftR' : 'shiftL';
+      if(keyEls[sh]) out.push(keyEls[sh]);
+    } else if(keyEls[ch]) out.push(keyEls[ch]);
+    return out;
+  }
+
+  /* ----- teks latihan (span dibuat sekali, hanya yang berubah yang diperbarui) ----- */
+  function mkSpan(ch){
+    var sp=document.createElement('span');
+    sp.textContent = ch==='\n' ? '\u21B5\n' : ch;
+    return sp;
+  }
+  // hanya sebagian teks (jendela di sekitar kursor) yang ditampilkan, supaya teks sangat panjang tetap ringan
+  function buildPassage(){
+    passageEl.textContent=''; spans=[];
+    winStart=Math.max(0,typed.length-BACK); winEnd=Math.min(target.length,winStart+WIN);
+    var frag=document.createDocumentFragment();
+    for(var i=winStart;i<winEnd;i++){ var sp=mkSpan(target[i]); spans.push(sp); frag.appendChild(sp); }
+    passageEl.appendChild(frag);
+    for(var j=winStart;j<winEnd;j++) paint(j);
+    rendered=typed.length;
+  }
+  function paint(i){
+    var sp=spans[i-winStart]; if(!sp) return;
+    var cls='';
+    if(i<typed.length) cls = typed[i]===target[i] ? 'c' : 'w';
+    else if(i===typed.length && !done) cls='cur';
+    if(sp.className!==cls) sp.className=cls;
+  }
+
+  function render(){
+    if(typed.length<winStart || (winEnd<target.length && typed.length>winEnd-400)) buildPassage();
+    var lo=Math.max(winStart,Math.min(rendered,typed.length)-1);
+    var hi=Math.min(winEnd-1,Math.max(rendered,typed.length)+1);
+    for(var i=lo;i<=hi;i++) paint(i);
+    rendered=typed.length;
+    Object.keys(keyEls).forEach(function(k){ keyEls[k].classList.remove('next'); });
+    if(done) return;
+    keyTargets(target[typed.length]).forEach(function(el){ el.classList.add('next'); });
+    var c=spans[typed.length-winStart];
+    if(c){
+      if(passageEl.classList.contains('long')) passageEl.scrollTop=Math.max(0,c.offsetTop-passageEl.clientHeight/2);
+      else if(c.scrollIntoView) c.scrollIntoView({block:'nearest'});
+    }
+  }
+
+  /* ----- statistik ----- */
+  function correctCount(){
+    var c=0; for(var i=0;i<typed.length;i++) if(typed[i]===target[i]) c++; return c;
+  }
+  function elapsed(){
+    if(!startT) return 0;
+    return (activeMs + (paused ? 0 : Date.now()-segStart))/1000;
+  }
+  function updateNote(){
+    var el=$('dNote'), msg='', warn=false;
+    if(view==='drill'){
+      if(capsOn){ msg='Caps Lock aktif. Matikan agar huruf tidak tertukar.'; warn=true; }
+      else if(paused && startT && !done){ msg='Waktu dijeda karena tidak ada ketikan. Ketik untuk melanjutkan.'; }
+    }
+    el.textContent=msg; el.classList.toggle('warn',warn);
+  }
+  function setCaps(v){ v=!!v; if(v!==capsOn){ capsOn=v; updateNote(); } }
+  function pauseAt(t){            // hentikan hitungan waktu pada saat t
+    if(!startT || done || paused) return;
+    activeMs+=Math.max(0,t-segStart); paused=true; pauses++; updateStats(); updateNote();
+  }
+  function touch(){               // dipanggil setiap ada aktivitas mengetik
+    var now=Date.now(); lastAct=now;
+    if(paused){ paused=false; segStart=now; updateNote(); }
+  }
+  function freezeTime(){          // bekukan waktu saat drill selesai
+    if(startT && !paused){ activeMs+=Date.now()-segStart; paused=true; }
+  }
+  function tick(){
+    if(!paused && !done && Date.now()-lastAct>IDLE_MS) pauseAt(lastAct);
+    updateStats();
+  }
+  function wpmNow(){
+    var t=elapsed(); if(t<1) return 0;
+    return Math.round((correctCount()/5)/(t/60));
+  }
+  function accNow(){ return totalKeys ? Math.round((1-wrongKeys/totalKeys)*100) : 100; }
+
+  function updateStats(){
+    $('wpm').textContent=wpmNow();
+    $('acc').textContent=accNow()+'%';
+    $('time').textContent = elapsed().toFixed(1);
+  }
+
+  function reset(newText){
+    if(newText) target=generate();
+    typed=[]; startT=null; done=false; totalKeys=0; wrongKeys=0;
+    sess={}; prevT=0; saved=false;
+    activeMs=0; segStart=0; lastAct=0; paused=false; pauses=0; doneAt=0;
+    clearInterval(timer); timer=null;
+    resultEl.classList.remove('show');
+    buildPassage(); passageEl.scrollTop=0;
+    updateStats(); render(); updateNote();
+  }
+
+  function isLast(){ return cur>=levels.length-1; }
+
+  // reason: 'stop' (dihentikan dengan Esc), selain itu = selesai
+  function finish(reason){
+    freezeTime(); done=true; doneAt=Date.now(); clearInterval(timer); timer=null;
+    updateStats(); render(); updateNote();
+    $('rTitle').textContent = reason==='stop' ? 'Dihentikan' : 'Selesai';
+    $('rWpm').textContent=wpmNow();
+    $('rAcc').textContent=accNow()+'%';
+    $('rTime').textContent = elapsed().toFixed(1);
+    $('rTimeLbl').textContent = pauses ? 'detik (waktu jeda tidak dihitung)' : 'detik';
+    $('rKeys').textContent=totalKeys;
+    $('rOk').textContent=correctCount();
+    $('rErr').textContent=wrongKeys;
+    recordSession(reason);
+    $('next').innerHTML = (isLast() ? 'Kembali ke daftar menu' : 'Menu selanjutnya') + ' <kbd>Enter</kbd>';
+    resultEl.classList.add('show');
+    if(document.activeElement && document.activeElement!==passageEl) document.activeElement.blur();
+  }
+
+  function hintFor(L){
+    var h='Mulai mengetik kapan saja. Backspace untuk memperbaiki, Tab untuk teks baru, F1 untuk mengulang dari awal saat drill berjalan. Waktu otomatis dijeda jika Anda berhenti mengetik lebih dari 5 detik.';
+    if(L.chars) h+=' Esc untuk berhenti lebih awal dan melihat hasil.';
+    if(L.text && enterOn) h+=' Tekan Enter di akhir baris (tanda \u21B5).';
+    return h+' Setelah hasil muncul: Enter = menu selanjutnya, Shift = ulangi drill.';
+  }
+
+  function startLevel(setKey,i){
+    if(setKey==='adapt') rebuildAdapt();
+    curKey=setKey; levels=SETS[setKey].levels;
+    if(!levels.length){ show(SETS[setKey].backView); return; }
+    if(i>=levels.length) i=0;
+    cur=i;
+    var L=levels[i];
+    $('backDrill').textContent=SETS[setKey].backText;
+    passageEl.classList.toggle('long',!!L.chars);
+    $('dTitle').textContent=(i+1)+'. '+L.name;
+    var info = L.info ? L.info : L.text ? L.count+' kata' : L.words ? L.words.length+' kata' : WORDS_PER_DRILL+' kata';
+    $('dSub').textContent=SETS[setKey].label+' · menu '+(i+1)+' dari '+levels.length+' · '+info;
+    $('dHint').textContent=hintFor(L);
+    buildBoard();
+    show('drill');
+    reset(true);
+    passageEl.focus();
+  }
+
+  function goNext(){
+    if(isLast()){ show(SETS[curKey].backView); } else { startLevel(curKey,cur+1); }
+  }
+  function repeatDrill(){ reset(false); passageEl.focus(); }
+
+  function flash(ch){
+    keyTargets(ch).forEach(function(el){
+      el.classList.add('hit'); setTimeout(function(){ el.classList.remove('hit'); },110);
+    });
+  }
+
+  /* ---------- Keyboard ---------- */
+  document.addEventListener('keydown',function(e){
+    if(e.getModifierState) setCaps(e.getModifierState('CapsLock'));
+    if(e.ctrlKey||e.metaKey||e.altKey) return;
+
+    if(view!=='drill'){
+      if(e.key==='Escape' && parents[view]){ show(parents[view]); }
+      return;
+    }
+
+    // Enter / Shift hanya aktif setelah hasil sesi muncul
+    if(done){
+      var locked = Date.now()-doneAt<DONE_LOCK;   // jeda singkat agar Enter/Shift kebiasaan tidak langsung melompat
+      if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat && !locked) goNext(); return; }
+      if(e.key==='Shift'){ e.preventDefault(); if(!e.repeat && !locked) repeatDrill(); return; }
+    }
+
+    // F1: ulangi drill dari awal (teks sama), hanya saat drill sedang berjalan
+    if(e.key==='F1'){
+      e.preventDefault();
+      if(startT && !done && !e.repeat){ reset(false); passageEl.focus(); }
+      return;
+    }
+
+    if(e.key==='Escape'){
+      if(done||!startT){ show(SETS[curKey].backView); }
+      else if(levels[cur].chars){ finish('stop'); }   // kata acak & teks unggahan: berhenti lebih awal
+      return;
+    }
+    if(e.key==='Tab'){ e.preventDefault(); reset(true); return; }
+    if(done) return;
+
+    // tombol yang sedang fokus (mis. "Kembali") tetap bekerja normal dengan Enter/Spasi
+    var t=e.target;
+    if(t && t.tagName==='BUTTON' && (e.key==='Enter'||e.key===' ')) return;
+
+    if(e.key==='Backspace'){ e.preventDefault(); if(typed.length){ if(startT) touch(); prevT=0; typed.pop(); playSound('key'); render(); } return; }
+
+    var ch;
+    if(e.key==='Enter'){ if(target[typed.length]!=='\n') return; ch='\n'; }
+    else if(e.key.length===1){ ch=e.key; }
+    else return;
+    e.preventDefault();
+
+    // Caps Lock: huruf yang benar tapi beda kapital bukan salah ketik, jangan dihitung
+    if(capsOn && /[A-Za-z]/.test(ch)){ var want=target[typed.length]; if(want && ch!==want && ch.toLowerCase()===want.toLowerCase()) return; }
+
+    if(!startT){ startT=Date.now(); segStart=startT; lastAct=startT; timer=setInterval(tick,200); }
+    else touch();
+    noteKey(target[typed.length],ch,performance.now());
+    totalKeys++;
+    if(ch!==target[typed.length]) wrongKeys++;
+    typed.push(ch);
+    playSound(soundKind(ch));
+    flash(ch);
+    updateStats(); render();
+    if(typed.length>=target.length) finish();
+  });
+
+  document.addEventListener('keyup',function(e){ if(e.key==='CapsLock' && e.getModifierState) setCaps(e.getModifierState('CapsLock')); });
+  // pindah tab / jendela kehilangan fokus: waktu langsung dijeda
+  function pauseNow(){ if(view==='drill') pauseAt(Date.now()); }
+  document.addEventListener('visibilitychange',function(){ if(document.hidden) pauseNow(); });
+  window.addEventListener('blur',pauseNow);
+
+  /* ---------- Database kata (file .txt per kategori) ---------- */
+  var LS_FILES='drillKata.files', LS_TEXTS='drillTeks.files', LS_ENTER='drillTeks.enter';
+  function lsGet(k,def){ try{ var v=localStorage.getItem(k); return v===null?def:v; }catch(e){ return def; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+
+  /* ---------- Suara ketik (Web Audio, tanpa file audio) ---------- */
+  var LS_SOUND='drill.sound';
+  var soundOn = lsGet(LS_SOUND,'1')==='1';
+  var actx=null, noiseBuf=null;
+  function audioInit(){
+    if(actx){ if(actx.state==='suspended') actx.resume(); return true; }
+    var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return false;
+    try{
+      actx=new AC();
+      noiseBuf=actx.createBuffer(1,Math.floor(actx.sampleRate*.2),actx.sampleRate);
+      var d=noiseBuf.getChannelData(0); for(var i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    }catch(e){ actx=null; return false; }
+    return true;
+  }
+  // semburan derau lewat filter (bunyi "klik" mekanis)
+  function noiseHit(t,type,freq,q,vol,dur){
+    var src=actx.createBufferSource(); src.buffer=noiseBuf;
+    var f=actx.createBiquadFilter(); f.type=type; f.frequency.value=freq; f.Q.value=q;
+    var g=actx.createGain();
+    g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    src.connect(f); f.connect(g); g.connect(actx.destination);
+    src.start(t); src.stop(t+dur+.02);
+  }
+  // nada pendek yang turun (bobot / "thock")
+  function toneHit(t,type,f0,f1,vol,dur){
+    var o=actx.createOscillator(); o.type=type;
+    o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+    var g=actx.createGain();
+    g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t+dur+.02);
+  }
+  var SOUNDS={
+    // huruf, angka, simbol: klik tinggi, singkat, ringan
+    key:function(t,v){
+      noiseHit(t,'bandpass',2600*v,1.2,.55,.035);
+      toneHit(t,'sine',1500*v,700*v,.12,.03);
+    },
+    // spasi: thock rendah, lebih lebar
+    space:function(t,v){
+      noiseHit(t,'bandpass',700*v,.8,.6,.07);
+      toneHit(t,'triangle',210*v,95*v,.38,.09);
+    },
+    // enter: dua ketukan berat + denting kecil, paling panjang
+    enter:function(t,v){
+      noiseHit(t,'lowpass',1400,.7,.7,.09);
+      toneHit(t,'triangle',150*v,70*v,.5,.13);
+      noiseHit(t+.07,'bandpass',3200,1.5,.4,.05);
+      toneHit(t+.07,'square',880*v,660*v,.06,.1);
+    }
+  };
+  function playSound(kind){
+    if(!soundOn || !audioInit()) return;
+    var v=.94+Math.random()*.12;   // variasi nada kecil supaya tidak monoton
+    SOUNDS[kind](actx.currentTime,v);
+  }
+  function soundKind(ch){ return ch==='\n' ? 'enter' : ch===' ' ? 'space' : 'key'; }
+  $('soundToggle').checked=soundOn;
+  $('soundToggle').addEventListener('change',function(e){
+    soundOn=e.target.checked; lsSet(LS_SOUND,soundOn?'1':'0');
+    if(soundOn) playSound('key');
+    e.target.blur(); passageEl.focus();
+  });
+
+  var store=[];
+  try{ var sv=JSON.parse(lsGet(LS_FILES,'[]')); if(Array.isArray(sv)) store=sv; }catch(e){}
+  function saveStore(){ try{ localStorage.setItem(LS_FILES,JSON.stringify(store)); return true; }catch(e){ return false; } }
+
+  // Karakter yang bisa diketik di papan keyboard aplikasi ini. Dipakai bersama oleh mode Kata dan mode Teks
+  var KB_STRIP=/[^A-Za-z0-9 \n!@#$%^&*()_:;'",.<>?\/+=-]/gu;   // untuk membuang (teks)
+  var KB_ENTRY=/^[A-Za-z0-9 !@#$%^&*()_:;'".<>?\/+=-]+$/;        // untuk memeriksa (entri kata; koma = pemisah)
+
+  // samakan karakter "cantik" / mirip dengan yang ada di keyboard, tanpa menghilangkan maknanya
+  function normalizeChars(t){
+    t=t.replace(/[\u201C\u201D\u201E\u00AB\u00BB]/g,'"').replace(/[\u2018\u2019\u201A\u00B4]/g,"'")
+       .replace(/[\u2013\u2014\u2212]/g,'-').replace(/\u2026/g,'...').replace(/[\u2022\u00B7\u25AA]/g,'-')
+       .replace(/\u00D7/g,'x').replace(/\u00F7/g,'/').replace(/\u2192/g,'->').replace(/\u2190/g,'<-')
+       .replace(/~/g,'-').replace(/\\/g,'/').replace(/\|/g,' ')
+       .replace(/[\[{]/g,'(').replace(/[\]}]/g,')').replace(/[\u00A0\u2000-\u200A\u202F\u3000\t]/g,' ');
+    try{ t=t.normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(x){}
+    return t;
+  }
+
+  function cleanEntry(e){
+    e=normalizeChars(e.replace(/`/g,"'")).replace(/\s+/g,' ').trim();
+    if(!e) return '';
+    return KB_ENTRY.test(e) ? e : null;   // null = ada karakter yang tidak ada di keyboard
+  }
+  function titleCase(t){ return t.toLowerCase().replace(/(^|[\s(\/-])([a-z])/g,function(m,a,b){ return a+b.toUpperCase(); }); }
+
+  function parseCategory(text,fname){
+    var lines=text.replace(/^\uFEFF/,'').split(/\r?\n/);
+    var title='', subs=[], cur=null, skipped=0, all=[];
+    function addEntry(raw){
+      var w=cleanEntry(raw);
+      if(w===null){ skipped++; return; }
+      if(!w) return;
+      cur.words.push(w);
+      all.push(w);
+    }
+    for(var i=0;i<lines.length;i++){
+      var line=lines[i].trim(); if(!line) continue;
+      if(line.charAt(0)==='['){
+        // [Nama] atau [Nama] kata1, kata2 (kata boleh di baris yang sama)
+        var hm=/^\[+([^\[\]]*)\]+\s*(.*)$/.exec(line);
+        if(hm){ cur={name:hm[1].trim(),words:[]}; subs.push(cur); if(hm[2]) hm[2].split(',').forEach(addEntry); }
+        else { cur={name:line.replace(/^\[+|\]+$/g,'').trim(),words:[]}; subs.push(cur); }
+        continue;
+      }
+      if(!title && !cur){
+        // baris pertama dianggap judul hanya jika berkode (T01. ...), atau tanpa koma dan diikuti [sub-kategori] / daftar koma.
+        // selain itu (mis. satu kata per baris tanpa judul) baris pertama adalah kata biasa.
+        var nxt=''; for(var j=i+1;j<lines.length;j++){ if(lines[j].trim()){ nxt=lines[j].trim(); break; } }
+        if(/^[A-Za-z]\d+\s*[.\-:]/.test(line) || (line.indexOf(',')<0 && (nxt.charAt(0)==='[' || nxt.indexOf(',')>=0))){ title=line; continue; }
+      }
+      if(!cur){ cur={name:'Umum',words:[]}; subs.push(cur); }
+      line.split(',').forEach(addEntry);
+    }
+    var code='', name='', level='';
+    var m=/^([A-Za-z]\d+)\s*[.\-:]\s*(.*?)\s*(?:\(([^)]*)\))?\s*$/.exec(title);
+    if(m){ code=m[1].toUpperCase(); name=m[2]; level=m[3]||''; }
+    else if(title){ name=title; }
+    if(!name){ name=fname.replace(/\.[^.]+$/,'').replace(/_/g,' '); var c2=/^[A-Za-z]\d+/.exec(fname); if(c2) code=c2[0].toUpperCase(); }
+    var chars={}; all.join('').split('').forEach(function(c){ chars[c]=1; });
+    return { fname:fname, code:code, name:titleCase(name), level:level, subs:subs, words:all, chars:Object.keys(chars).join(''), skipped:skipped };
+  }
+
+  function rebuildWords(){
+    var cats=store.map(function(f){ return parseCategory(f.text,f.name); }).filter(function(c){ return c.words.length; });
+    cats.sort(function(a,b){ return ((a.code||'~')+a.name).localeCompare((b.code||'~')+b.name); });
+    var lv=cats.map(function(c){
+      return { name:c.name, badge:c.code||'•', words:c.words, chars:c.chars, pool:c.chars,
+        desc:(c.code?c.code+' · ':'')+(c.level?c.level+' · ':'')+c.words.length+' kata · '+c.subs.length+' sub-kategori' };
+    });
+    if(cats.length>1){
+      var allw=[], allc={};
+      cats.forEach(function(c){ allw=allw.concat(c.words); c.chars.split('').forEach(function(ch){ allc[ch]=1; }); });
+      var cs=Object.keys(allc).join('');
+      lv.unshift({ name:'Semua kategori', badge:'Σ', words:allw, chars:cs, pool:cs, desc:'Gabungan '+cats.length+' kategori · '+allw.length+' kata' });
+    }
+    SETS.words.levels=lv;
+    fillMenu($('wordsMenu'),'words');
+    $('wordsEmpty').hidden = lv.length>0;
+    $('clearWords').hidden = lv.length===0;
+  }
+
+  function setStatus(t){ $('wordsStatus').textContent=t||''; }
+
+  function handleFiles(files){
+    var arr=Array.prototype.slice.call(files); if(!arr.length) return;
+    var msgs=[], pending=arr.length;
+    function finish(){
+      if(--pending>0) return;
+      if(!saveStore()) msgs.push('Tidak bisa menyimpan di browser, kategori hanya berlaku sampai halaman ditutup');
+      rebuildWords(); setStatus(msgs.join(' · '));
+      $('wordFile').value='';
+    }
+    arr.forEach(function(f){
+      var r=new FileReader();
+      r.onload=function(){
+        var text=String(r.result), cat=parseCategory(text,f.name);
+        if(!cat.words.length){ msgs.push(f.name+': tidak ada kata yang terbaca'); }
+        else {
+          store=store.filter(function(x){ return x.name!==f.name; });
+          store.push({name:f.name,text:text});
+          msgs.push(f.name+': '+cat.words.length+' kata dimuat'+(cat.skipped?' ('+cat.skipped+' entri dilewati karena memuat karakter yang tidak ada di keyboard)':''));
+        }
+        finish();
+      };
+      r.onerror=function(){ msgs.push(f.name+': gagal dibaca'); finish(); };
+      r.readAsText(f,'utf-8');
+    });
+  }
+
+  /* ---------- Teks unggahan (cerita / percakapan dari AI) ---------- */
+  var texts=[];
+  try{ var st=JSON.parse(lsGet(LS_TEXTS,'[]')); if(Array.isArray(st)) texts=st; }catch(e){}
+  var enterOn = lsGet(LS_ENTER,'1')==='1';
+  function saveTexts(){ return lsSet(LS_TEXTS,JSON.stringify(texts)); }
+
+  // ubah teks AI jadi teks yang bisa diketik dengan keyboard biasa
+  function cleanText(raw,enter){
+    var t=raw.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n');
+    // format markdown -> teks polos
+    t=t.replace(/\[([^\]\n]*)\]\([^)\n]*\)/g,'$1');                 // [teks](url) -> teks
+    t=t.replace(/^[ \t]*[|:\-_*=][ \t|:\-_*=]{2,}$/gm,'');              // garis pemisah, pemisah tabel
+    t=t.replace(/\*\*|__|`/g,'').replace(/^[ \t]*#{1,6}[ \t]+/gm,'');
+    t=t.replace(/^([ \t]*)[*+][ \t]+/gm,'$1- ');                         // bullet * dan +
+    t=t.replace(/(^|[^\w*])\*([^\s*](?:[^*\n]*[^\s*])?)\*(?![\w*])/g,'$1$2');   // *miring*
+    t=t.replace(/(^|[^\w])_([^\s_](?:[^_\n]*[^\s_])?)_(?!\w)/g,'$1$2');         // _miring_
+    t=normalizeChars(t);
+    var removed=0, dropped={};
+    t=t.replace(KB_STRIP,function(c){ removed++; dropped[c]=1; return ''; });
+    t=t.split('\n').map(function(l){ return l.replace(/ +/g,' ').trim(); }).filter(Boolean).join(enter?'\n':' ');
+    return { text:t.replace(/ +/g,' ').trim(), removed:removed, dropped:Object.keys(dropped) };
+  }
+  function textName(fname){ return fname.replace(/\.[^.]+$/,'').replace(/_/g,' ').trim() || fname; }
+
+  function rebuildTexts(){
+    var lv=[];
+    texts.slice().sort(function(a,b){ return textName(a.name).localeCompare(textName(b.name)); }).forEach(function(f){
+      var r=cleanText(f.text,enterOn); if(!r.text) return;
+      var words=r.text.split(/\s+/).length, cs={};
+      r.text.split('').forEach(function(c){ cs[c]=1; });
+      var chars=Object.keys(cs).join('');
+      lv.push({ name:textName(f.name), text:r.text, count:words, chars:chars, pool:chars,
+        desc:words+' kata · '+r.text.length+' karakter'+(enterOn?' · '+r.text.split('\n').length+' baris':'') });
+    });
+    SETS.texts.levels=lv;
+    fillMenu($('textsMenu'),'texts');
+    $('textsEmpty').hidden = lv.length>0;
+    $('clearTexts').hidden = lv.length===0;
+  }
+
+  function handleTextFiles(files){
+    var arr=Array.prototype.slice.call(files); if(!arr.length) return;
+    var msgs=[], pending=arr.length;
+    function finish(){
+      if(--pending>0) return;
+      if(!saveTexts()) msgs.push('Tidak bisa menyimpan di browser, teks hanya berlaku sampai halaman ditutup');
+      rebuildTexts(); $('textsStatus').textContent=msgs.join(' · ');
+      $('textFile').value='';
+    }
+    arr.forEach(function(f){
+      var r=new FileReader();
+      r.onload=function(){
+        var raw=String(r.result), c=cleanText(raw,enterOn);
+        if(!c.text){ msgs.push(f.name+': tidak ada teks yang terbaca'); }
+        else {
+          texts=texts.filter(function(x){ return x.name!==f.name; });
+          texts.push({name:f.name,text:raw});
+          msgs.push(f.name+': '+c.text.split(/\s+/).length+' kata dimuat'+(c.removed?' ('+c.removed+' karakter yang tidak ada di keyboard dihapus: '+c.dropped.slice(0,10).join(' ')+(c.dropped.length>10?' ...':'')+')':''));
+        }
+        finish();
+      };
+      r.onerror=function(){ msgs.push(f.name+': gagal dibaca'); finish(); };
+      r.readAsText(f,'utf-8');
+    });
+  }
+
+  /* ---------- Riwayat, statistik, analisis huruf lemah ---------- */
+  var LS_HIST='drill.hist', LS_KEYS='drill.keys', MAX_HIST=1000, MIN_N=5, PAD=TOP+HOME+BOT;
+  var MON=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  var hist=[], keyStats={}, chartDays=14, sess={}, prevT=0, saved=false;
+  try{ var h0=JSON.parse(lsGet(LS_HIST,'[]')); if(Array.isArray(h0)) hist=h0; }catch(e){}
+  try{ var k0=JSON.parse(lsGet(LS_KEYS,'{}')); if(k0 && typeof k0==='object' && !Array.isArray(k0)) keyStats=k0; }catch(e){}
+  function saveStats(){ var a=lsSet(LS_HIST,JSON.stringify(hist)), b=lsSet(LS_KEYS,JSON.stringify(keyStats)); return a&&b; }
+
+  // kapital dan simbol bershift dihitung ke tombol dasarnya
+  function fold(ch){ if(ch==='\n') return ch; if(SHIFT_MAP[ch]) return SHIFT_MAP[ch]; return ch.toLowerCase(); }
+  function keyLabel(k){ return k==='\n' ? 'Enter' : k===' ' ? 'Spasi' : k.toUpperCase(); }
+  function fmtDate(ts){ var d=new Date(ts); return d.getDate()+' '+MON[d.getMonth()]+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+  function dayKey(ts){ var d=new Date(ts); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+  function dayNum(k){ var p=k.split('-'); return Math.round(Date.UTC(+p[0],+p[1]-1,+p[2])/864e5); }
+
+  // dicatat per ketukan: tombol yang seharusnya, salah/benar, dan latensi (hanya ketukan benar)
+  function noteKey(want,ch,now){
+    var k=fold(want), s=sess[k]||(sess[k]={n:0,e:0,ls:0,lc:0,m:{}});
+    s.n++;
+    if(ch!==want){ s.e++; var f=fold(ch); s.m[f]=(s.m[f]||0)+1; }
+    else if(prevT){ var d=now-prevT; if(d>=25 && d<=2000){ s.ls+=d; s.lc++; } }
+    prevT=now;
+  }
+
+  function bestSession(){ var b=null; hist.forEach(function(s){ if(s.k>=20 && (!b||s.w>b.w)) b=s; }); return b; }
+  function streaks(){
+    var set={}; hist.forEach(function(s){ set[dayKey(s.t)]=1; });
+    var nums=Object.keys(set).map(dayNum).sort(function(a,b){ return a-b; }), has={}, longest=0, run=0, i;
+    for(i=0;i<nums.length;i++){ has[nums[i]]=1; run=(i&&nums[i]-nums[i-1]===1)?run+1:1; if(run>longest) longest=run; }
+    var today=dayNum(dayKey(Date.now())), d=has[today]?today:today-1, cur=0;
+    while(has[d]){ cur++; d--; }
+    return {cur:cur,longest:longest,todayDone:!!has[today]};
+  }
+
+  function recordSession(reason){
+    if(saved) return; saved=true;
+    var n=$('rNote'); n.textContent='';
+    if(totalKeys<10) return;
+    var prev=bestSession(), w=wpmNow(), was=streaks().todayDone;
+    hist.push({t:Date.now(),w:w,a:accNow(),sec:Math.round(elapsed()),k:totalKeys,e:wrongKeys,m:SETS[curKey].label+' \u00B7 '+levels[cur].name});
+    if(hist.length>MAX_HIST) hist=hist.slice(-MAX_HIST);
+    Object.keys(sess).forEach(function(k){
+      var s=sess[k], g=keyStats[k]||(keyStats[k]={n:0,e:0,ls:0,lc:0,m:{}});
+      g.n+=s.n; g.e+=s.e; g.ls+=s.ls; g.lc+=s.lc;
+      Object.keys(s.m).forEach(function(c){ g.m[c]=(g.m[c]||0)+s.m[c]; });
+    });
+    var ok=saveStats(), parts=[];
+    if(totalKeys>=20 && w>0 && (!prev || w>prev.w)) parts.push('Rekor WPM baru!'+(prev?' (sebelumnya '+prev.w+')':''));
+    if(!was) parts.push('Streak '+streaks().cur+' hari');
+    if(!ok) parts.push('Statistik tidak bisa disimpan di browser');
+    n.textContent=parts.join(' \u00B7 ');
+  }
+
+  // analisis per tombol: skor lemah = % salah + tambahan jika lebih lambat dari rata-rata
+  function analyze(){
+    var tl=0, tc=0, rows=[];
+    Object.keys(keyStats).forEach(function(k){ tl+=keyStats[k].ls; tc+=keyStats[k].lc; });
+    var gl=tc?tl/tc:0;
+    Object.keys(keyStats).forEach(function(k){
+      var g=keyStats[k]; if(g.n<MIN_N) return;
+      var er=g.e/g.n, lat=g.lc>=3?g.ls/g.lc:0, slow=(gl&&lat)?Math.max(0,lat/gl-1):0, top=null, tn=0;
+      Object.keys(g.m).forEach(function(c){ if(g.m[c]>tn){ tn=g.m[c]; top=c; } });
+      rows.push({k:k,n:g.n,e:g.e,er:er,lat:lat,score:er*100+slow*20,conf:top});
+    });
+    return {rows:rows,gl:gl};
+  }
+
+  function renderChart(){
+    var N=chartDays, today=dayNum(dayKey(Date.now())), by={}, vals=[], max=0, i;
+    hist.forEach(function(s){ var n=dayNum(dayKey(s.t)); if(n>today-N && n<=today) (by[n]||(by[n]=[])).push(s.w); });
+    for(i=0;i<N;i++){
+      var n=today-N+1+i, a=by[n], v=a?Math.round(a.reduce(function(x,y){ return x+y; },0)/a.length):null;
+      vals.push({n:n,v:v,c:a?a.length:0}); if(v!==null && v>max) max=v;
+    }
+    max=Math.max(20,Math.ceil(max/10)*10);
+    var W=640,H=190,L=34,B=22,T=16,pw=(W-L)/N,ph=H-B-T,out='';
+    [0,.5,1].forEach(function(f){
+      var y=T+ph*(1-f);
+      out+='<line x1="'+L+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+Math.round(max*f)+'</text>';
+    });
+    vals.forEach(function(o,i){
+      var x=L+i*pw, d=new Date(o.n*864e5);
+      if(o.v!==null){
+        var h=Math.max(2,ph*o.v/max);
+        out+='<rect x="'+(x+pw*.15)+'" y="'+(T+ph-h)+'" width="'+(pw*.7)+'" height="'+h+'" rx="3" style="fill:var(--next)"><title>'+d.getUTCDate()+' '+MON[d.getUTCMonth()]+': '+o.v+' WPM, '+o.c+' sesi</title></rect>';
+        if(N<=14) out+='<text x="'+(x+pw/2)+'" y="'+(T+ph-h-4)+'" text-anchor="middle" font-size="10" fill="var(--text)">'+o.v+'</text>';
+      }
+      if(N<=14 || (N-1-i)%5===0) out+='<text x="'+(x+pw/2)+'" y="'+(H-6)+'" text-anchor="middle" font-size="11" fill="var(--muted)">'+d.getUTCDate()+'</text>';
+    });
+    $('chart').innerHTML=out;
+  }
+
+  function renderWeak(){
+    var A=analyze(), rows=A.rows.slice().sort(function(a,b){ return b.score-a.score; }), tb=$('weakBody');
+    tb.textContent=''; $('weakEmpty').hidden=rows.length>0;
+    $('weakAvg').textContent=A.gl?'Latensi rata-rata semua tombol: '+Math.round(A.gl)+' ms.':'';
+    rows.forEach(function(r,i){
+      var tr=document.createElement('tr'); if(i<5 && r.score>0) tr.className='weak';
+      [keyLabel(r.k), r.n, (r.er*100).toFixed(1)+'% ('+r.e+')', r.lat?Math.round(r.lat)+' ms':'-', r.conf?keyLabel(r.conf):'-'].forEach(function(v,j){
+        var td=document.createElement('td'); td.textContent=v; if(j===0) td.className='k'; tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+  }
+
+  function renderHist(){
+    var ul=$('histList'); ul.textContent='';
+    hist.slice(-15).reverse().forEach(function(s){
+      var li=document.createElement('li'), a=document.createElement('span'), b=document.createElement('b');
+      a.textContent=fmtDate(s.t)+' \u00B7 '+s.m; b.textContent=s.w+' WPM \u00B7 '+s.a+'% \u00B7 '+s.sec+' dtk';
+      li.appendChild(a); li.appendChild(b); ul.appendChild(li);
+    });
+  }
+
+  function renderStats(){
+    var st=streaks(), b=bestSession(), info='';
+    $('sBest').textContent=b?b.w:0; $('sStreak').textContent=st.cur; $('sLong').textContent=st.longest; $('sCount').textContent=hist.length;
+    if(b) info='Rekor '+b.w+' WPM pada '+fmtDate(b.t)+' \u00B7 '+b.m+'.';
+    if(!st.todayDone && st.cur>0) info+=' Selesaikan satu drill hari ini untuk menjaga streak.';
+    $('sBestInfo').textContent=info; $('sEmpty').hidden=hist.length>0;
+    $('c14').setAttribute('aria-pressed',chartDays===14); $('c30').setAttribute('aria-pressed',chartDays===30);
+    renderChart(); renderWeak(); renderHist();
+  }
+
+  // menu adaptif dibangun ulang dari statistik terbaru
+  function rebuildAdapt(){
+    var A=analyze(), lv=[], seen={};
+    var rows=A.rows.filter(function(r){ return PAD.indexOf(r.k)>=0; });
+    function top(fn,n){
+      return rows.filter(function(r){ return fn(r)>0; }).sort(function(a,b){ return fn(b)-fn(a); }).slice(0,n).map(function(r){ return r.k; }).join('');
+    }
+    function add(name,pool,why){
+      var sig=pool.split('').sort().join('');
+      if(pool.length<3 || seen[sig]) return; seen[sig]=1;
+      lv.push({ name:name, rows:[TOP,HOME,BOT], pool:pool, desc:spaced(pool)+'  \u00B7  '+why, noRepeat:true });
+    }
+    var weak=top(function(r){ return r.score; },6);
+    add('Gabungan huruf lemah',weak,'skor gabungan');
+    add('Paling sering salah',top(function(r){ return r.er; },6),'salah ketik');
+    add('Paling lambat',top(function(r){ return r.lat; },6),'latensi tinggi');
+    // kata dari database kategori yang memuat huruf lemah
+    if(weak){
+      rebuildWords();
+      var all=[], uniq={};
+      SETS.words.levels.forEach(function(l){ if(l.badge!=='\u03A3') all=all.concat(l.words); });
+      var hit=all.filter(function(w){
+        var lw=w.toLowerCase(); if(uniq[lw]) return false;
+        for(var i=0;i<weak.length;i++) if(lw.indexOf(weak[i])>=0){ uniq[lw]=1; return true; }
+        return false;
+      });
+      if(hit.length>=15){
+        var cs={}; hit.join('').split('').forEach(function(c){ cs[c]=1; });
+        var chars=Object.keys(cs).join(''), cnt=Math.min(30,hit.length);
+        lv.push({ name:'Kata database dengan huruf lemah', words:hit, chars:chars, pool:chars, info:cnt+' kata',
+          desc:hit.length+' kata memuat '+spaced(weak), gen:function(){ return sampleWords(hit,cnt).join(' '); } });
+      }
+    }
+    SETS.adapt.levels=lv;
+    fillMenu($('adaptMenu'),'adapt');
+    $('adaptEmpty').hidden=lv.length>0;
+    var wk=A.rows.filter(function(r){ return r.score>0; }).sort(function(a,b){ return b.score-a.score; }).slice(0,6).map(function(r){ return keyLabel(r.k); });
+    $('adaptWeak').textContent=wk.length?'Tombol terlemah saat ini: '+wk.join(' \u00B7 '):'';
+  }
+
+  $('openStats').addEventListener('click',function(){ show('stats'); });
+  $('backStats').addEventListener('click',function(){ show('main'); });
+  $('openAdapt').addEventListener('click',function(){ show('adapt'); });
+  $('goAdapt').addEventListener('click',function(){ show('adapt'); });
+  $('backAdapt').addEventListener('click',function(){ show('main'); });
+  $('c14').addEventListener('click',function(){ chartDays=14; renderStats(); });
+  $('c30').addEventListener('click',function(){ chartDays=30; renderStats(); });
+  $('clearStats').addEventListener('click',function(){
+    if(!confirm('Hapus seluruh riwayat dan statistik huruf dari browser ini?')) return;
+    hist=[]; keyStats={}; saveStats(); renderStats();
+  });
+
+  /* ---------- Tombol ---------- */
+  $('openAbs').addEventListener('click',function(){ show('abs'); });
+  $('backMain').addEventListener('click',function(){ show('main'); });
+  $('openFinger').addEventListener('click',function(){ show('finger'); });
+  $('backMain2').addEventListener('click',function(){ show('main'); });
+  $('openWords').addEventListener('click',function(){ rebuildWords(); setStatus(''); show('words'); });
+  $('backMain3').addEventListener('click',function(){ show('main'); });
+  $('pickFiles').addEventListener('click',function(){ $('wordFile').click(); });
+  $('wordFile').addEventListener('change',function(e){ handleFiles(e.target.files); });
+  $('clearWords').addEventListener('click',function(){
+    if(!confirm('Hapus semua kategori kata dari browser ini?')) return;
+    store=[]; saveStore(); rebuildWords(); setStatus('Semua kategori dihapus.');
+  });
+
+  $('openTexts').addEventListener('click',function(){ rebuildTexts(); $('textsStatus').textContent=''; show('texts'); });
+  $('backMain4').addEventListener('click',function(){ show('main'); });
+  $('pickTexts').addEventListener('click',function(){ $('textFile').click(); });
+  $('textFile').addEventListener('change',function(e){ handleTextFiles(e.target.files); });
+  $('enterToggle').checked=enterOn;
+  $('enterToggle').addEventListener('change',function(e){
+    enterOn=e.target.checked; lsSet(LS_ENTER,enterOn?'1':'0'); rebuildTexts();
+  });
+  $('clearTexts').addEventListener('click',function(){
+    if(!confirm('Hapus semua teks unggahan dari browser ini?')) return;
+    texts=[]; saveTexts(); rebuildTexts(); $('textsStatus').textContent='Semua teks dihapus.';
+  });
+  $('backDrill').addEventListener('click',function(){ clearInterval(timer); timer=null; show(SETS[curKey].backView); });
+  $('next').addEventListener('click',goNext);
+  $('redo').addEventListener('click',repeatDrill);
+  passageEl.addEventListener('click',function(){ passageEl.focus(); });
+
+  fillMenu($('absMenu'),'abs');
+  fillMenu($('fingerMenu'),'finger');
+  show('main');
+})();
+</script>
+</body>
+</html>
